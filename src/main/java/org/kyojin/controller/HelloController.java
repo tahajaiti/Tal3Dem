@@ -1,9 +1,13 @@
 package org.kyojin.controller;
 
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityManagerFactory;
+import jakarta.persistence.Persistence;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.kyojin.entity.Donor;
 
 import java.io.IOException;
 
@@ -11,6 +15,18 @@ public class HelloController extends HttpServlet {
 
     @Override
     public void init() {
+        EntityManagerFactory emf = Persistence.createEntityManagerFactory("tal3demPU");
+        EntityManager em = emf.createEntityManager();
+
+        em.getTransaction().begin();
+        Donor donor = new Donor();
+        donor.setUsername("donor1");
+
+        em.persist(donor);
+        em.getTransaction().commit();
+        em.close();
+        emf.close();
+
         System.out.println("HelloController initialized");
     }
 
