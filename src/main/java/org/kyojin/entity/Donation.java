@@ -5,31 +5,27 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.kyojin.enums.BloodType;
 
 import java.util.Date;
 
 @Entity
-@Inheritance(strategy = InheritanceType.JOINED)
-@Table(name = "users")
-@Setter
+@Table(name = "donations")
 @Getter
+@Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public abstract class User {
+public class Donation {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    String username;
-    String email;
-    String password;
-    String phone;
-    String cin;
-    Date birthDate;
+    @ManyToOne(fetch = FetchType.LAZY)
+    private Donor donor;
 
-    @Enumerated(EnumType.STRING)
-    BloodType bloodType;
+    @ManyToOne(fetch = FetchType.LAZY)
+    private Receiver receiver;
+
+    private Date donationDate;
 
 }

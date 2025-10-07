@@ -1,16 +1,20 @@
 package org.kyojin.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.PrimaryKeyJoinColumn;
-import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
+import jakarta.persistence.*;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.kyojin.enums.ReceiverState;
+import org.kyojin.enums.Urgency;
 
 @Entity
 @Table(name="receivers")
 @Getter
 @Setter
-public class Receiver extends User{
+public class Receiver extends User {
+
+    @Enumerated(EnumType.STRING)
+    Urgency urgency;
+    @Enumerated(EnumType.STRING)
+    ReceiverState state;
+    Integer requiredDonors;
 }
