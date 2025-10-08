@@ -13,7 +13,13 @@
     <!-- Servlet Mapping -->
     <servlet-mapping>
         <servlet-name>HelloController</servlet-name>
-        <url-pattern>/</url-pattern>
+        <url-pattern>/hello</url-pattern>
     </servlet-mapping>
+
+    <!-- Listners -->
+    <listener>
+        <listener-class>org.kyojin.core.AppBootstrap</listener-class>
+    </listener>
+
 
 </web-app>
