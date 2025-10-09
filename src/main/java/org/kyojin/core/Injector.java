@@ -6,16 +6,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class Injector {
     private static final Map<Class<?>, Object> singletonRegistry = new HashMap<>();
     private static final Map<Class<?>, Injectable.Scope> scopeRegistry = new HashMap<>();
+    private static final Map<Class<?>, Class<?>> interfaceBindings = new HashMap<>();
     private static final List<String> excludedPackages = new ArrayList<>();
     private static final Logger logger = LoggerFactory.getLogger(Injector.class);
 
@@ -30,17 +29,11 @@ public class Injector {
     public static void scanPackage(String packageName) {
         try {
             String path = packageName.replace('.', '/');
-
             URL folderPath = Thread.currentThread().getContextClassLoader().getResource(path);
-
-            if (folderPath == null) {
-                throw new IllegalArgumentException("Package not found: " + packageName);
-            }
+            if (folderPath == null) throw new IllegalArgumentException("Package not found: " + packageName);
 
             File dir = new File(folderPath.toURI());
-
-            for (File file : dir.listFiles()) {
-                // Skip core excluded packages
+            for (File file : Objects.requireNonNull(dir.listFiles())) {
                 if (excludedPackages.stream().anyMatch(packageName::startsWith)) continue;
 
                 if (file.isDirectory()) {
@@ -48,20 +41,30 @@ public class Injector {
                 } else if (file.getName().endsWith(".class")) {
                     String className = packageName + '.' + file.getName().replace(".class", "");
                     Class<?> cls = Class.forName(className);
+
                     if (cls.isAnnotationPresent(Injectable.class)) {
                         register(cls);
                         logger.info("Registered injectable class: {}", className);
                     }
+
+                    if (cls.isAnnotationPresent(Implementation.class)) {
+                        Implementation implAnnotation = cls.getAnnotation(Implementation.class);
+                        Class<?> iface = implAnnotation.value();
+                        bind(iface, cls);
+                        logger.info("Bound interface {} -> {}", iface.getName(), cls.getName());
+                    }
                 }
             }
-
-
         } catch (Exception e) {
-            logger.error("Failed to scan package: {}{}", packageName, e.getMessage(), e);
+            logger.error("Failed to scan package {}: {}", packageName, e.getMessage(), e);
             throw new RuntimeException("Failed to scan package: " + packageName);
         }
     }
 
+    /**
+     * Excludes a package from being scanned by the Injector.
+     * @param packageName the package name to exclude
+     */
     public static void excludePackage(String packageName) {
         excludedPackages.add(packageName);
     }
@@ -89,6 +92,23 @@ public class Injector {
     }
 
     /**
+     * Binds an interface to an implementation
+     * @param interfaceClass the interface class to bind
+     * @param implClass the concrete implementation
+     */
+    public static void bind(Class<?> interfaceClass, Class<?> implClass){
+        if (!interfaceClass.isInterface()){
+            throw new ClassCreationException(interfaceClass.getName() + " is not an instance of " + implClass.getName());
+        }
+
+        if (!interfaceClass.isAssignableFrom(implClass)){
+            throw new ClassCreationException("Class " + implClass.getName() + " is not an instance of " + interfaceClass.getName());
+        }
+
+        interfaceBindings.put(interfaceClass, implClass);
+    }
+
+    /**
      * Retrieves an instance of the specified class, injecting its dependencies as needed.
      * @param cls the class to retrieve an instance of
      * @return an instance of the specified class
@@ -112,25 +132,26 @@ public class Injector {
      * @throws ClassCreationException if the class instance cannot be created
      * @throws InjectionFailedException if a dependency cannot be injected
      */
+    @SuppressWarnings("unchecked")
     public static <T> T get(Class<T> cls, Injectable.Scope overrideScope) {
         try {
-            Injectable.Scope scope = overrideScope != null ? overrideScope : scopeRegistry.get(cls);
+            Class<?> implClass = resolveImplementation(cls);
 
-            if (scope == null) throw new IllegalArgumentException("Class " + cls.getName() + " is not registered");
+            Injectable.Scope scope = overrideScope != null ? overrideScope : scopeRegistry.get(implClass);
+            if (scope == null) throw new IllegalArgumentException("Class " + implClass.getName() + " is not registered");
 
             switch (scope) {
                 case SINGLETON -> {
-                    if (singletonRegistry.containsKey(cls)) {
-                        return cls.cast(singletonRegistry.get(cls));
-                    } else {
-                        T instance = cls.getDeclaredConstructor().newInstance();
-                        injectDependencies(instance);
-                        singletonRegistry.put(cls, instance);
-                        return instance;
-                    }
+                    if (singletonRegistry.containsKey(implClass))
+                        return (T) singletonRegistry.get(implClass);
+
+                    T instance = (T) createInstance(implClass);
+                    injectDependencies(instance);
+                    singletonRegistry.put(implClass, instance);
+                    return instance;
                 }
                 case FACTORY -> {
-                    T instance = cls.getDeclaredConstructor().newInstance();
+                    T instance = (T) createInstance(implClass);
                     injectDependencies(instance);
                     return instance;
                 }
@@ -138,8 +159,8 @@ public class Injector {
             }
 
         } catch (Exception e) {
-            logger.error("Failed to create instance of class: {}{}", cls.getName(), e.getMessage(), e);
-            throw new ClassCreationException("Failed to create instance of class: " + cls.getName());
+            logger.error("Failed to create instance of {}: {}", cls.getName(), e.getMessage(), e);
+            throw new ClassCreationException("Failed to create instance of: " + cls.getName() + e.getMessage());
         }
     }
 
@@ -150,22 +171,111 @@ public class Injector {
      * @throws InjectionFailedException if a dependency cannot be injected
      */
     private static void injectDependencies(Object instance) {
-        Field[] fields = instance.getClass().getDeclaredFields();
-        for (Field field : fields) {
-            if (field.isAnnotationPresent(Inject.class)) {
-                Inject fieldAnnotation = field.getAnnotation(Inject.class);
-                Injectable.Scope fieldScope = fieldAnnotation.scope();
+        Class<?> cls = instance.getClass();
 
-                Object dependency = get(field.getType(), fieldScope);
-                try {
-                    field.setAccessible(true);
-                    field.set(instance, dependency);
-                } catch (Exception e) {
-                    logger.error("Failed to inject dependency into field: {}{}", field.getName(), e.getMessage(), e);
-                    throw new InjectionFailedException("Failed to inject dependency into field: " + field.getName());
+        while (cls != null) {
+            Field[] fields = cls.getDeclaredFields();
+            for (Field field : fields) {
+                if (field.isAnnotationPresent(Inject.class)) {
+                    Inject fieldAnnotation = field.getAnnotation(Inject.class);
+                    Injectable.Scope fieldScope = fieldAnnotation.scope();
+
+                    Object dependency = get(field.getType(), fieldScope);
+                    try {
+                        field.setAccessible(true);
+                        field.set(instance, dependency);
+                    } catch (Exception e) {
+                        logger.error("Failed to inject dependency into field: {}{}", field.getName(), e.getMessage(), e);
+                        throw new InjectionFailedException("Failed to inject dependency into field: " + field.getName());
+                    }
                 }
             }
+            cls = cls.getSuperclass();
         }
+
+
     }
 
+    /**
+     * Resolves an interface to its implementation class
+     * @param cls the class to resolve (maybe interface or concrete class)
+     * @return the implementation class to use
+     */
+    private static <T> Class<?> resolveImplementation(Class<T> cls) {
+        if (cls.isInterface()) {
+            Class<?> impl = interfaceBindings.get(cls);
+            if (impl == null)
+                throw new ClassCreationException("No implementation found for interface: " + cls.getName());
+            return impl;
+        }
+        return cls;
+    }
+
+    private static Object createInstance(Class<?> cls){
+        Constructor<?>[] constructors = cls.getDeclaredConstructors();
+
+        // sort constructors by number of parameters (ascending)
+        Arrays.sort(constructors, Comparator.comparingInt(Constructor::getParameterCount));
+
+        List<String> errMessages = new  ArrayList<>();
+
+        for (Constructor<?> constructor : constructors) {
+
+            try {
+                constructor.setAccessible(true);
+
+                if (constructor.getParameterCount() == 0) {
+                    return constructor.newInstance();
+                }
+
+                Class<?>[] paramTypes = constructor.getParameterTypes();
+                Object[] params = new Object[paramTypes.length];
+                for (int i = 0; i < paramTypes.length; i++) {
+                    params[i] = get(paramTypes[i]);
+                }
+                return constructor.newInstance(params);
+            } catch (Exception e) {
+                String errorMsg = String.format("Constructor with parameters %s failed: %s",
+                        Arrays.toString(constructor.getParameterTypes()), e.getMessage());
+                errMessages.add("Failed to access constructor: " + e.getMessage());
+                logger.debug("Constructor attempt failed for {}: {}", cls.getName(), errorMsg);
+
+            }
+
+        }
+
+        String errorMessage = String.format(
+                "No suitable constructor found for %s. Attempted constructors:%n%s",
+                cls.getName(),
+                String.join("%n", errMessages)
+        );
+
+        logger.error(errorMessage);
+        throw new ClassCreationException(errorMessage);
+
+//        for (Constructor<?> constructor : constructors) {
+//            if (constructor.getParameterCount() == 0) {
+//                try {
+//                    constructor.setAccessible(true);
+//                    return constructor.newInstance();
+//                } catch (Exception e) {
+//                    throw new ClassCreationException("Failed to create instance of: " + cls.getName());
+//                }
+//            }
+//        }
+//
+//        for (Constructor<?> constructor : constructors) {
+//            try {
+//                constructor.setAccessible(true);
+//                Class<?>[] paramTypes = constructor.getParameterTypes();
+//                Object[] params = new Object[paramTypes.length];
+//                for (int i = 0; i < paramTypes.length; i++) {
+//                    params[i] = get(paramTypes[i]);
+//                }
+//                return constructor.newInstance(params);
+//            } catch (Exception e) {
+//                // Continue to next constructor
+//            }
+//        }
+    }
 }
