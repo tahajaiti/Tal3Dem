@@ -13,11 +13,16 @@ import java.util.Date;
 @Setter
 public class Donor extends User {
 
-    Double weight;
-    @Enumerated(EnumType.STRING)
-    DonorStatus status;
-    Date lastDonationDate;
+    @Column(nullable = false)
+    private Double weight;
 
-    @OneToOne(mappedBy = "donor",cascade = CascadeType.ALL, orphanRemoval = true)
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private DonorStatus status;
+
+    private Date lastDonationDate;
+
+    @OneToOne(mappedBy = "donor", cascade = CascadeType.ALL, orphanRemoval = true)
     private MedicalProfile medicalProfile;
+
 }

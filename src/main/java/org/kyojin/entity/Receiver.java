@@ -13,8 +13,10 @@ import org.kyojin.enums.Urgency;
 public class Receiver extends User {
 
     @Enumerated(EnumType.STRING)
-    Urgency urgency;
+    private Urgency urgency;
+
     @Enumerated(EnumType.STRING)
-    ReceiverState state;
-    Integer requiredDonors;
+    private ReceiverState state;
+
+    private Integer requiredDonors;
 }

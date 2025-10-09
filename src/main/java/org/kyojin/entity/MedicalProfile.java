@@ -19,13 +19,24 @@ public class MedicalProfile {
     private Long id;
 
     @OneToOne
-    @JoinColumn(name = "donor_id", referencedColumnName = "id")
+    @JoinColumn(name = "donor_id", referencedColumnName = "id", nullable = false)
     private Donor donor;
 
+    @Column(nullable = true)
     private Boolean isPregnant;
+
+    @Column(nullable = true)
     private Boolean isBreastfeeding;
+
+    @Column(nullable = true)
     private Boolean hasHiv;
+
+    @Column(nullable = true)
     private Boolean hasHepatitisB;
+
+    @Column(nullable = true)
     private Boolean hasHepatitisC;
+
+    @Column(nullable = true)
     private Boolean hasDiabetes;
 }

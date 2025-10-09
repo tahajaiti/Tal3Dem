@@ -54,17 +54,16 @@ public abstract class JpaRepository<T, I> implements Repository<T, I> {
     public Optional<T> findBy(String fieldName, Object value) {
         EntityManager em = emProvider.get();
         try {
-            String query = "SELECT * FROM" + entityClass.getSimpleName() + " WHERE " + fieldName + " = ?";
-
-            TypedQuery<T> queryObject = em.createQuery(query, entityClass);
-            queryObject.setParameter(1, value);
-
-            return Optional.ofNullable(queryObject.getSingleResult());
-        } catch(Exception e) {
-            logger.error("Error finding entity with name {}: {}", fieldName, e.getMessage(), e);
+            String jpql = "SELECT e FROM " + entityClass.getSimpleName() + " e WHERE e." + fieldName + " = :value";
+            TypedQuery<T> query = em.createQuery(jpql, entityClass);
+            query.setParameter("value", value);
+            return query.getResultStream().findFirst();
+        } catch (Exception e) {
+            logger.error("Error finding entity by {}: {}", fieldName, e.getMessage());
             throw e;
         }
     }
+
 
     @Override
     public T update(T entity) {

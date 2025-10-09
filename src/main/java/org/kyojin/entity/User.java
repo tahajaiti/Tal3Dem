@@ -22,14 +22,25 @@ public abstract class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    String username;
-    String email;
-    String password;
-    String phone;
-    String cin;
-    Date birthDate;
+    @Column(nullable = false, length = 100)
+    private String username;
+
+    @Column(unique = true, nullable = false)
+    private String email;
+
+    @Column(nullable = false)
+    private String password;
+
+    @Column(length = 20)
+    private String phone;
+
+    @Column(length = 10, unique = true)
+    private String cin;
+
+    private Date birthDate;
 
     @Enumerated(EnumType.STRING)
-    BloodType bloodType;
+    @Column(length = 10)
+    private BloodType bloodType;
 
 }
