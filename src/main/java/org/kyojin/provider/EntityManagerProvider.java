@@ -3,7 +3,7 @@ package org.kyojin.provider;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Persistence;
-import org.kyojin.core.Injectable;
+import org.kyojin.core.annotation.Injectable;
 
 @Injectable
 public class EntityManagerProvider {

@@ -4,7 +4,7 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.kyojin.core.Injector;
-import org.kyojin.repository.TestRepository;
+import org.kyojin.validation.Validator;
 
 import java.io.IOException;
 
@@ -12,9 +12,8 @@ public class HelloController extends HttpServlet {
 
     @Override
     public void init() {
-        TestRepository testRepository = Injector.get(TestRepository.class);
+        Validator validator = Injector.get(Validator.class);
 
-        System.out.println(testRepository.count());
 
     }
 

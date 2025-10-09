@@ -2,7 +2,7 @@ package org.kyojin.repository;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
-import org.kyojin.core.Inject;
+import org.kyojin.core.annotation.Inject;
 import org.kyojin.provider.EntityManagerProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
