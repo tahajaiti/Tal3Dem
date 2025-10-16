@@ -149,6 +149,4 @@ Notes:
 
 ## UML Class Diagram
 
-```
 [![Class Diagram](assets/class.svg)](assets/class.svg)
-```
