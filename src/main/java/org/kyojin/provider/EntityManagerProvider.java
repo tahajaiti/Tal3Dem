@@ -4,6 +4,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Persistence;
 import org.kyojin.core.annotation.Injectable;
+import org.kyojin.util.EnvLoader;
 
 @Injectable
 public class EntityManagerProvider {
@@ -11,6 +12,7 @@ public class EntityManagerProvider {
     private final EntityManagerFactory emf;
 
     public EntityManagerProvider() {
+        EnvLoader.load();
         this.emf = Persistence.createEntityManagerFactory("tal3demPU");
     }
 

@@ -6,6 +6,11 @@ services:
       - "8080:8080"
     volumes:
       - ./target/ROOT:/usr/local/tomcat/webapps/ROOT
+      - ./.env:/usr/local/tomcat/webapps/ROOT/.env
+    environment:
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
+      DB_URL: ${DB_URL}
     depends_on:
       - db
 
@@ -13,9 +18,9 @@ services:
     image: postgres:latest
     container_name: db
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: root
-      POSTGRES_DB: tal3dem
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "5432:5432"
     volumes:
