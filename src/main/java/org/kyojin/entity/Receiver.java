@@ -8,6 +8,8 @@ import org.kyojin.enums.Urgency;
 
 @Entity
 @Table(name="receivers")
+@DiscriminatorValue("RECEIVER")
+@PrimaryKeyJoinColumn(name = "id")
 @Getter
 @Setter
 public class Receiver extends User {

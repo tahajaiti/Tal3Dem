@@ -9,6 +9,8 @@ import java.util.Date;
 
 @Entity
 @Table(name="donors")
+@DiscriminatorValue("DONOR")
+@PrimaryKeyJoinColumn(name = "id")
 @Getter
 @Setter
 public class Donor extends User {
