@@ -150,5 +150,5 @@ Notes:
 ## UML Class Diagram
 
 ```
-![UML Class Diagram](assets/class.svg)
+[![Class Diagram](assets/class.svg)](assets/class.svg)
 ```
