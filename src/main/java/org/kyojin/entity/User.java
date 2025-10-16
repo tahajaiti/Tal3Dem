@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.kyojin.enums.BloodType;
+import org.kyojin.enums.Gender;
 
 import java.util.Date;
 
@@ -23,7 +24,7 @@ public abstract class User {
     private Long id;
 
     @Column(nullable = false, length = 100)
-    private String username;
+    private String name;
 
     @Column(unique = true, nullable = false)
     private String email;
@@ -31,16 +32,22 @@ public abstract class User {
     @Column(nullable = false)
     private String password;
 
-    @Column(length = 20)
+    @Column(length = 25)
     private String phone;
 
-    @Column(length = 10, unique = true)
+    @Column(unique = true)
     private String cin;
 
     private Date birthDate;
 
     @Enumerated(EnumType.STRING)
-    @Column(length = 10)
     private BloodType bloodType;
+
+    @Enumerated(EnumType.STRING)
+    private Gender gender;
+
+    public String getUserType() {
+        return this.getClass().getSimpleName();
+    }
 
 }
