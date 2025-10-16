@@ -16,6 +16,12 @@ public class AppBootstrap implements ServletContextListener {
         Injector.excludePackage(List.of("org.kyojin.controller", "org.kyojin.core"));
         Injector.scanPackage("org.kyojin");
 
+        try {
+            RouteBootstrap.register(sce.getServletContext(), "org.kyojin.controller");
+        } catch (ClassNotFoundException e) {
+            logger.error(e.getMessage(), e);
+        }
+
         logger.info("Application context initialized and packages scanned.");
     }
 }
